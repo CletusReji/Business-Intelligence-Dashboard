@@ -12,7 +12,6 @@ st.set_page_config(
 # --- DATA LOADING (Same function as app.py) ---
 @st.cache_data
 def load_and_prepare_data():
-    # (Copy the same full, working data loading function here as well)
     try:
         df_facebook = pd.read_csv('Facebook.csv').rename(columns={'impression': 'impressions', 'attributed revenue': 'attributed_revenue'})
         df_google = pd.read_csv('Google.csv').rename(columns={'impression': 'impressions', 'attributed revenue': 'attributed_revenue'})
@@ -31,7 +30,7 @@ def get_channel_insights(df, platform):
     if df.empty: return "No data for insights."
     tactic_perf = df.groupby('tactic').agg({'spend': 'sum', 'attributed_revenue': 'sum'}).reset_index()
     tactic_perf['roas'] = (tactic_perf['attributed_revenue'] / tactic_perf['spend']).fillna(0)
-    if tactic_perf.empty: return "Not enough data for tactic comparison."
+    if tactic_perf.empty or tactic_perf['roas'].max() == 0: return "Not enough data for tactic comparison."
     best_tactic = tactic_perf.loc[tactic_perf['roas'].idxmax()]
     return f"On **{platform}**, the **'{best_tactic['tactic']}'** tactic is the most efficient, with a **{best_tactic['roas']:.2f}x ROAS**."
 
@@ -43,6 +42,9 @@ st.markdown("Analyze the performance of individual marketing channels, tactics, 
 
 if not df_marketing_details.empty:
     df_marketing_details['date'] = pd.to_datetime(df_marketing_details['date'])
+
+    # --- FIX: Calculate ROAS for the DataFrame ---
+    df_marketing_details['roas'] = (df_marketing_details['attributed_revenue'] / df_marketing_details['spend']).fillna(0)
     
     # --- FILTERS ---
     st.sidebar.header("Filters")
@@ -53,7 +55,6 @@ if not df_marketing_details.empty:
     all_platforms = df_marketing_details['platform'].unique()
     selected_platform = st.sidebar.selectbox("Select a Platform", all_platforms)
     
-    # --- TARGET SETTING ---
     target_roas = st.sidebar.number_input("Set Target ROAS", value=3.0, step=0.1)
 
     if len(date_range) == 2:
@@ -63,22 +64,21 @@ if not df_marketing_details.empty:
 
         st.header(f"Performance for {selected_platform}")
 
-        # --- KEY INSIGHTS ---
         with st.expander("See automated summary", expanded=True):
             st.markdown(get_channel_insights(df_filtered, selected_platform))
         
-        # --- KPIs ---
+        # --- RESTORED: KPIs ---
         col1, col2, col3, col4 = st.columns(4)
         spend = df_filtered['spend'].sum()
         revenue = df_filtered['attributed_revenue'].sum()
-        roas = (revenue / spend) if spend > 0 else 0
+        roas_kpi = (revenue / spend) if spend > 0 else 0
         clicks = df_filtered['clicks'].sum()
         col1.metric("Total Spend", f"${spend:,.0f}")
         col2.metric("Attributed Revenue", f"${revenue:,.0f}")
-        col3.metric("Channel ROAS", f"{roas:.2f}x")
+        col3.metric("Channel ROAS", f"{roas_kpi:.2f}x")
         col4.metric("Total Clicks", f"{clicks:,}")
         
-        # --- BREAKDOWNS WITH TARGET LINE ---
+        # --- RESTORED: BREAKDOWNS WITH TARGET LINE ---
         st.header("Performance Breakdowns")
         c1, c2 = st.columns(2)
         
@@ -94,7 +94,26 @@ if not df_marketing_details.empty:
         fig_state.add_hline(y=target_roas, line_dash="dot", annotation_text="Target ROAS", annotation_position="bottom right")
         c2.plotly_chart(fig_state, use_container_width=True)
 
-        # --- DATA EXPORT ---
+        # --- GEOSPATIAL ANALYSIS ---
+        st.header(f"Geospatial Performance for {selected_platform}")
+        state_performance_map = df_filtered.groupby('state').agg(
+            spend=('spend', 'sum'),
+            roas=('roas', 'mean')
+        ).reset_index()
+        fig_map = px.choropleth(
+            state_performance_map,
+            locations='state',
+            locationmode="USA-states",
+            color='roas',
+            hover_name='state',
+            hover_data=['spend'],
+            color_continuous_scale="Viridis",
+            scope="usa",
+            title="Average ROAS by State"
+        )
+        st.plotly_chart(fig_map, use_container_width=True)
+
+        # --- RESTORED: DATA EXPORT ---
         st.header("Filtered Channel Data")
         st.dataframe(df_filtered)
         st.download_button(
