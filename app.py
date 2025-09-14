@@ -22,7 +22,7 @@ def load_and_prepare_data():
         df_facebook = pd.read_csv('Facebook.csv').rename(columns={'impression': 'impressions', 'attributed revenue': 'attributed_revenue'})
         df_google = pd.read_csv('Google.csv').rename(columns={'impression': 'impressions', 'attributed revenue': 'attributed_revenue'})
         df_tiktok = pd.read_csv('TikTok.csv').rename(columns={'impression': 'impressions', 'attributed revenue': 'attributed_revenue'})
-        df_business = pd.read_csv('Business.csv').rename(columns={'# of orders': 'orders', '# of new orders': 'new_orders', 'new customers': 'new_customers', 'total revenue': 'total_revenue', 'gross profit': 'gross_profit'})
+        df_business = pd.read_csv('business.csv').rename(columns={'# of orders': 'orders', '# of new orders': 'new_orders', 'new customers': 'new_customers', 'total revenue': 'total_revenue', 'gross profit': 'gross_profit'})
         for df in [df_facebook, df_google, df_tiktok, df_business]:
             df.columns = df.columns.str.strip().str.lower().str.replace(' ', '_')
         df_facebook['platform'] = 'Facebook'; df_google['platform'] = 'Google'; df_tiktok['platform'] = 'TikTok'
