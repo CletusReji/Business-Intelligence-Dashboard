@@ -37,8 +37,6 @@ def load_and_prepare_data():
         df_merged['cpc'] = (df_merged['spend'] / df_merged['clicks']).fillna(0)
         df_merged['ctr'] = (df_merged['clicks'] / df_merged['impressions'] * 100).fillna(0)
         df_merged['cpo'] = (df_merged['spend'] / df_merged['orders']).fillna(0)
-        
-        # --- NEW METRIC CALCULATION ---
         df_merged['cac'] = (df_merged['spend'] / df_merged['new_customers']).fillna(0)
         
         return df_merged, df_marketing
@@ -101,7 +99,6 @@ if not df_daily_performance.empty:
         prev_roas = (df_previous['attributed_revenue'].sum() / prev_spend) if prev_spend > 0 else 0
         prev_cac = (df_previous['spend'].sum() / df_previous['new_customers'].sum()) if df_previous['new_customers'].sum() > 0 else 0
 
-        # --- UPDATED KPI SECTION ---
         col1, col2, col3, col4, col5 = st.columns(5)
         col1.metric("Total Revenue", f"${total_revenue:,.0f}", f"{total_revenue - prev_revenue:,.0f}", help="Total revenue from all orders.")
         col2.metric("Gross Profit", f"${total_profit:,.0f}", f"{total_profit - prev_profit:,.0f}", help="Total Revenue minus Cost of Goods Sold.")
@@ -113,6 +110,41 @@ if not df_daily_performance.empty:
         fig_revenue_spend = px.line(df_filtered, x='date', y=['total_revenue', 'spend', 'gross_profit'], title='Daily Revenue, Spend, and Profit', labels={'value': 'Amount (USD)', 'date': 'Date'})
         st.plotly_chart(fig_revenue_spend, use_container_width=True)
 
+        # --- NEW SECTION: PROPORTIONAL ANALYSIS ---
+        st.header("Spend vs. Revenue Proportions")
+
+        platform_perf = df_marketing_filtered.groupby('platform').agg({
+            'spend': 'sum',
+            'attributed_revenue': 'sum'
+        }).reset_index()
+
+        c1, c2 = st.columns(2)
+
+        with c1:
+            st.subheader("Ad Spend by Platform")
+            fig_spend_pie = px.pie(
+                platform_perf,
+                names='platform',
+                values='spend',
+                hole=0.4, # This makes it a donut chart
+                title='Proportion of Spend',
+                color_discrete_sequence=px.colors.sequential.Aggrnyl
+            )
+            st.plotly_chart(fig_spend_pie, use_container_width=True)
+
+        with c2:
+            st.subheader("Attributed Revenue by Platform")
+            fig_revenue_pie = px.pie(
+                platform_perf,
+                names='platform',
+                values='attributed_revenue',
+                hole=0.4,
+                title='Proportion of Revenue',
+                color_discrete_sequence=px.colors.sequential.Blues_r
+            )
+            st.plotly_chart(fig_revenue_pie, use_container_width=True)
+
+        # --- DATA EXPORT ---
         st.header("Raw Data")
         st.dataframe(df_filtered)
         st.download_button(label="📥 Download Filtered Data as CSV", data=df_filtered.to_csv(index=False).encode('utf-8'), file_name='overview_data.csv', mime='text/csv')

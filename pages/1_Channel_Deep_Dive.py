@@ -43,7 +43,7 @@ st.markdown("Analyze the performance of individual marketing channels, tactics, 
 if not df_marketing_details.empty:
     df_marketing_details['date'] = pd.to_datetime(df_marketing_details['date'])
 
-    # --- FIX: Calculate ROAS for the DataFrame ---
+    # --- Calculate ROAS for the DataFrame ---
     df_marketing_details['roas'] = (df_marketing_details['attributed_revenue'] / df_marketing_details['spend']).fillna(0)
     
     # --- FILTERS ---
@@ -67,7 +67,7 @@ if not df_marketing_details.empty:
         with st.expander("See automated summary", expanded=True):
             st.markdown(get_channel_insights(df_filtered, selected_platform))
         
-        # --- RESTORED: KPIs ---
+        # --- KPIs ---
         col1, col2, col3, col4 = st.columns(4)
         spend = df_filtered['spend'].sum()
         revenue = df_filtered['attributed_revenue'].sum()
@@ -77,8 +77,24 @@ if not df_marketing_details.empty:
         col2.metric("Attributed Revenue", f"${revenue:,.0f}")
         col3.metric("Channel ROAS", f"{roas_kpi:.2f}x")
         col4.metric("Total Clicks", f"{clicks:,}")
+
+        # --- DAILY TRENDS FOR SELECTED CHANNEL ---
+        st.header(f"Daily Trends for {selected_platform}")
+        daily_perf = df_filtered.groupby('date').agg({
+            'spend': 'sum',
+            'attributed_revenue': 'sum'
+        }).reset_index()
+
+        fig_daily_trend = px.line(
+            daily_perf,
+            x='date',
+            y=['spend', 'attributed_revenue'],
+            title=f'Daily Spend and Revenue for {selected_platform}',
+            labels={'value': 'Amount (USD)', 'date': 'Date'}
+        )
+        st.plotly_chart(fig_daily_trend, use_container_width=True)
         
-        # --- RESTORED: BREAKDOWNS WITH TARGET LINE ---
+        # --- BREAKDOWNS WITH TARGET LINE ---
         st.header("Performance Breakdowns")
         c1, c2 = st.columns(2)
         
@@ -113,7 +129,22 @@ if not df_marketing_details.empty:
         )
         st.plotly_chart(fig_map, use_container_width=True)
 
-        # --- RESTORED: DATA EXPORT ---
+        # --- FUNNEL ANALYSIS ---
+        st.header(f"Marketing Funnel for {selected_platform}")
+        total_impressions = df_filtered['impressions'].sum()
+        total_clicks = df_filtered['clicks'].sum()
+
+        if total_impressions > 0 and total_clicks > 0:
+            funnel_data = dict(
+                number=[total_impressions, total_clicks],
+                stage=["Impressions", "Clicks"]
+            )
+            fig_funnel = px.funnel(funnel_data, x='number', y='stage', title=f"Impression-to-Click Funnel on {selected_platform}")
+            st.plotly_chart(fig_funnel, use_container_width=True)
+        else:
+            st.warning("Not enough data to build a funnel chart for the selected period.")
+
+        # --- DATA EXPORT ---
         st.header("Filtered Channel Data")
         st.dataframe(df_filtered)
         st.download_button(
