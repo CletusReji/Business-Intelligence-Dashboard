@@ -2,7 +2,7 @@
 
 This project is an interactive Business Intelligence (BI) dashboard built with Python and Streamlit. It analyzes marketing campaign data from multiple platforms (Facebook, Google, TikTok) and connects it to core business performance metrics to provide actionable insights for decision-makers.
 
-The live dashboard can be accessed here: `[INSERT YOUR STREAMLIT APP LINK HERE]`
+The live dashboard can be accessed here: `https://cletus-business-intelligence-dashboard.streamlit.app/`
 
 ---
 
